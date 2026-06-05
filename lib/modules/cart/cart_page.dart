@@ -7,10 +7,19 @@ import 'cart_controller.dart';
 class CartPage extends StatelessWidget {
   const CartPage({super.key});
 
-  void _showPaymentPopup(BuildContext context, CartController controller) {
+  Future<void> _showPaymentPopup(
+    BuildContext context,
+    CartController controller,
+  ) async {
     if (controller.cartItems.isEmpty) {
       Get.snackbar('Cart Empty', 'Please add items first');
       return;
+    }
+
+    if (controller.paymentTypes.isEmpty ||
+        controller.storeSettings.isEmpty ||
+        controller.printSettings.isEmpty) {
+      await controller.fetchPosInit();
     }
 
     if (controller.paymentTypes.isEmpty) {
@@ -39,44 +48,52 @@ class CartPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
 
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: controller.paymentTypes.map((type) {
-                    final selected =
-                        controller.selectedPaymentType.value?['id'] ==
-                        type['id'];
+                if (controller.isPaymentLoading.value)
+                  const Padding(
+                    padding: EdgeInsets.all(20),
+                    child: CircularProgressIndicator(),
+                  )
+                else
+                  Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: controller.paymentTypes.map((type) {
+                      final selected =
+                          controller.selectedPaymentType.value?['id'] ==
+                          type['id'];
 
-                    return InkWell(
-                      onTap: () => controller.selectPaymentType(type),
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? AppColors.primary
-                              : const Color(0xFFF4F8F5),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
+                      return InkWell(
+                        onTap: () => controller.selectPaymentType(type),
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
                             color: selected
                                 ? AppColors.primary
-                                : Colors.grey.withOpacity(0.25),
+                                : const Color(0xFFF4F8F5),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: selected
+                                  ? AppColors.primary
+                                  : Colors.grey.withOpacity(0.25),
+                            ),
+                          ),
+                          child: Text(
+                            type['title']?.toString() ?? '',
+                            style: TextStyle(
+                              color: selected
+                                  ? Colors.white
+                                  : AppColors.textDark,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                         ),
-                        child: Text(
-                          type['title']?.toString() ?? '',
-                          style: TextStyle(
-                            color: selected ? Colors.white : AppColors.textDark,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
+                      );
+                    }).toList(),
+                  ),
 
                 const SizedBox(height: 22),
 
@@ -137,6 +154,7 @@ class CartPage extends StatelessWidget {
         child: Column(
           children: [
             _CartHeader(onClear: controller.clearCart),
+
             Expanded(
               child: Obx(() {
                 if (controller.cartItems.isEmpty) {
@@ -167,6 +185,7 @@ class CartPage extends StatelessWidget {
                 );
               }),
             ),
+
             Obx(
               () => _CartSummary(
                 subtotal: controller.subtotal,
@@ -252,13 +271,13 @@ class _CartItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final item = cart['item'];
+    final item = Map<String, dynamic>.from(cart['item'] ?? {});
     final variant = cart['variant'];
     final addons = cart['addons'] is List ? cart['addons'] as List : [];
 
-    final title = item['title'] ?? '';
-    final category = item['category_title'] ?? '';
-    final qty = cart['quantity'] ?? 1;
+    final title = item['title']?.toString() ?? '';
+    final category = item['category_title']?.toString() ?? '';
+    final qty = int.tryParse(cart['quantity']?.toString() ?? '1') ?? 1;
     final total = double.tryParse(cart['total']?.toString() ?? '0') ?? 0;
 
     return Container(
@@ -290,7 +309,9 @@ class _CartItemCard extends StatelessWidget {
               size: 38,
             ),
           ),
+
           const SizedBox(width: 14),
+
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -304,7 +325,9 @@ class _CartItemCard extends StatelessWidget {
                     fontSize: 15,
                   ),
                 ),
+
                 const SizedBox(height: 3),
+
                 Text(
                   variant != null
                       ? '$category • ${variant['title']}'
@@ -314,6 +337,7 @@ class _CartItemCard extends StatelessWidget {
                     fontSize: 12,
                   ),
                 ),
+
                 if (addons.isNotEmpty)
                   Text(
                     addons.map((a) => a['title']).join(', '),
@@ -324,7 +348,9 @@ class _CartItemCard extends StatelessWidget {
                       fontSize: 11,
                     ),
                   ),
+
                 const SizedBox(height: 8),
+
                 Text(
                   'LKR ${total.toStringAsFixed(2)}',
                   style: const TextStyle(
@@ -335,15 +361,18 @@ class _CartItemCard extends StatelessWidget {
               ],
             ),
           ),
+
           Column(
             children: [
               IconButton(
                 onPressed: onRemove,
                 icon: const Icon(Icons.close, size: 18),
               ),
+
               Row(
                 children: [
                   _QtyButton(icon: Icons.remove, onTap: onMinus),
+
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Text(
@@ -351,6 +380,7 @@ class _CartItemCard extends StatelessWidget {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
+
                   _QtyButton(icon: Icons.add, onTap: onPlus),
                 ],
               ),
@@ -416,18 +446,24 @@ class _CartSummary extends StatelessWidget {
             title: 'Subtotal',
             value: 'LKR ${subtotal.toStringAsFixed(2)}',
           ),
+
           const SizedBox(height: 10),
+
           _SummaryRow(
             title: 'Service Charge',
             value: 'LKR ${serviceCharge.toStringAsFixed(2)}',
           ),
+
           const Divider(height: 26),
+
           _SummaryRow(
             title: 'Total',
             value: 'LKR ${total.toStringAsFixed(2)}',
             bold: true,
           ),
+
           const SizedBox(height: 18),
+
           SizedBox(
             width: double.infinity,
             height: 52,
@@ -474,7 +510,9 @@ class _SummaryRow extends StatelessWidget {
             fontSize: bold ? 17 : 14,
           ),
         ),
+
         const Spacer(),
+
         Text(
           value,
           style: TextStyle(

@@ -44,6 +44,8 @@ class PrinterController extends GetxController {
 
       if (!isConnected.value) {
         connectedAddress.value = '';
+      } else {
+        connectedAddress.value = PrinterService.savedPrinterAddress ?? '';
       }
     } catch (e) {
       isConnected.value = false;
@@ -190,15 +192,13 @@ class PrinterController extends GetxController {
     isLoading.value = true;
 
     try {
-      print('CPCL TEST PRINT CLICKED');
-
       final result = await PrinterService.testPrint();
 
       await checkConnection();
 
       Get.snackbar(
         result ? 'Success' : 'Failed',
-        result ? 'CPCL test print sent successfully' : 'CPCL test print failed',
+        result ? 'Test print sent successfully' : 'Test print failed',
       );
     } catch (e) {
       print('TEST PRINT CONTROLLER ERROR: $e');

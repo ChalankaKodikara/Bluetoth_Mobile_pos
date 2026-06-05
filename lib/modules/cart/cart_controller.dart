@@ -264,6 +264,10 @@ class CartController extends GetxController {
       return;
     }
 
+    if (storeSettings.isEmpty || printSettings.isEmpty) {
+      await fetchPosInit();
+    }
+
     isCheckoutLoading.value = true;
 
     try {

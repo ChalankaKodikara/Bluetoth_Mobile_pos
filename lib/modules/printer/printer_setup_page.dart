@@ -134,13 +134,15 @@ class PrinterSetupPage extends StatelessWidget {
                                 width: 108,
                                 height: 38,
                                 child: ElevatedButton(
-                                  onPressed: () {
-                                    if (isThisPrinterConnected) {
-                                      controller.disconnectPrinter();
-                                    } else {
-                                      controller.connectPrinter(printer);
-                                    }
-                                  },
+                                  onPressed: controller.isLoading.value
+                                      ? null
+                                      : () {
+                                          if (isThisPrinterConnected) {
+                                            controller.disconnectPrinter();
+                                          } else {
+                                            controller.connectPrinter(printer);
+                                          }
+                                        },
                                   child: Text(
                                     isThisPrinterConnected
                                         ? 'Disconnect'
